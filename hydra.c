@@ -237,7 +237,7 @@ extern void hydra_tobase64(unsigned char *buf, int32_t buflen, int32_t bufsize);
 extern char *hydra_string_replace(const char *string, const char *substr, const char *replacement);
 extern char *hydra_address2string(char *address);
 extern char *hydra_address2string_beautiful(char *address);
-extern int32_t colored_output;
+extern uint32_t colored_output;
 extern char quiet;
 extern int32_t do_retry;
 extern int32_t old_ssl;
@@ -3353,7 +3353,7 @@ int main(int argc, char *argv[]) {
     // script kiddie patch
     if (hydra_options.server != NULL && (hydra_strcasestr(hydra_options.server, ".outlook.com") != NULL || hydra_strcasestr(hydra_options.server, ".hotmail.com") != NULL || hydra_strcasestr(hydra_options.server, ".yahoo.") != NULL || hydra_strcasestr(hydra_options.server, ".gmx.") != NULL || hydra_strcasestr(hydra_options.server, ".web.de") != NULL || hydra_strcasestr(hydra_options.server, ".gmail.") != NULL || hydra_strcasestr(hydra_options.server, "googlemail.") != NULL)) {
       fprintf(stderr, "[WARNING] Google Mail and others have bruteforce and "
-                      "hydra detection and sends false positives. You are not "
+                      "hydra detection and send false positives. You are not "
                       "doing anything illegal right?!\n");
       fprintf(stderr, "[WARNING] !read the above!\n");
       sleep(5);
