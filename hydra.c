@@ -1,5 +1,5 @@
 /*
- * hydra (c) 2001-2020 by van Hauser / THC <vh@thc.org>
+ * hydra (c) 2001-2021 by van Hauser / THC <vh@thc.org>
  * https://github.com/vanhauser-thc/thc-hydra
  *
  * Parallized network login hacker.
@@ -11,6 +11,7 @@
  */
 #include "hydra.h"
 #include "bfg.h"
+#include <strings.h>
 
 #ifdef LIBNCURSES
 #include <curses.h>
@@ -225,7 +226,7 @@ char *SERVICES = "adam6500 asterisk afp cisco cisco-enable cvs firebird ftp[s] "
 #define RESTOREFILE "./hydra.restore"
 
 #define PROGRAM "Hydra"
-#define VERSION "v9.2-dev"
+#define VERSION "v9.2"
 #define AUTHOR "van Hauser/THC"
 #define EMAIL "<vh@thc.org>"
 #define AUTHOR2 "David Maciejak"
@@ -505,7 +506,7 @@ void help(int32_t ext) {
                "  -x MIN:MAX:CHARSET  password bruteforce generation, type "
                "\"-x -h\" to get help\n"
                "  -y        disable use of symbols in bruteforce, see above\n"
-               "  -r		 rainy mode for password generation (-x)\n"
+               "  -r        use a non-random shuffling method for option -x\n"
 #endif
                "  -e nsr    try \"n\" null password, \"s\" login as pass "
                "and/or \"r\" reversed login\n"
@@ -591,7 +592,9 @@ void help_bfg() {
          "             'A' for uppercase letters, '1' for numbers, and for all "
          "others,\n"
          "             just add their real representation.\n"
-         "  -y         disable the use of the above letters as placeholders\n\n"
+         "  -y         disable the use of the above letters as placeholders\n"
+         "  -r         use a shuffling method called 'rain' to try to break\n"
+         "             the linearity of the bruteforce\n"
          "Examples:\n"
          "   -x 3:5:a  generate passwords from length 3 to 5 with all "
          "lowercase letters\n"
@@ -610,16 +613,12 @@ void help_bfg() {
 
 void module_usage() {
   int32_t i;
-  if (!hydra_options.service) {
-    printf("The Module %s does not need or support optional parameters\n", hydra_options.service);
-    exit(0);
-  }
 
   printf("\nHelp for module "
          "%s:\n================================================================"
          "============\n",
          hydra_options.service);
-  if (strncmp(hydra_options.service, "https-", 6) == 0 )
+  if (strncmp(hydra_options.service, "https-", 6) == 0)
     memmove(hydra_options.service + 4, hydra_options.service + 5, strlen(hydra_options.service) - 4);
   for (i = 0; i < sizeof(services) / sizeof(services[0]); i++) {
     if (strcmp(hydra_options.service, services[i].name) == 0) {
@@ -1781,7 +1780,7 @@ int32_t hydra_send_next_pair(int32_t target_no, int32_t head_no) {
 #ifndef HAVE_MATH_H
                   sleep(1);
 #else
-                  hydra_targets[target_no]->pass_ptr = bf_next(hydra_options.rainy);
+                  hydra_targets[target_no]->pass_ptr = bf_next();
                   if (debug)
                     printf("[DEBUG] bfg new password for next child: %s\n", hydra_targets[target_no]->pass_ptr);
 #endif
@@ -2153,7 +2152,7 @@ int main(int argc, char *argv[]) {
   struct sockaddr_in6 *ipv6 = NULL;
   struct sockaddr_in *ipv4 = NULL;
 
-  printf("%s %s (c) 2020 by %s & %s - Please do not use in military or secret "
+  printf("%s %s (c) 2021 by %s & %s - Please do not use in military or secret "
          "service organizations, or for illegal purposes (this is non-binding, these *** ignore laws and ethics anyway).\n\n",
          PROGRAM, VERSION, AUTHOR, AUTHOR2);
 #ifndef LIBAFP
@@ -2281,7 +2280,6 @@ int main(int argc, char *argv[]) {
   hydra_brains.ofp = stdout;
   hydra_brains.targets = 1;
   hydra_options.waittime = waittime = WAITTIME;
-  hydra_options.rainy = 0;
   bf_options.disable_symbols = 0;
 
   // command line processing
@@ -2317,7 +2315,7 @@ int main(int argc, char *argv[]) {
       hydra_restore_read();
       break;
     case 'r':
-      hydra_options.rainy = 1;
+      fprintf(stderr, "Warning: the option -r has been removed.\n");
       break;
     case 'I':
       ignore_restore = 1; // this is not to be saved in hydra_options!
@@ -3187,7 +3185,6 @@ int main(int argc, char *argv[]) {
         printf("[INFO] Using HTTP Proxy: %s\n", getenv("HYDRA_PROXY_HTTP"));
         use_proxy = 1;
       }
-
       if (strstr(hydra_options.miscptr, "\\:") != NULL) {
         fprintf(stderr, "[INFORMATION] escape sequence \\: detected in module "
                         "option, no parameter verification is performed.\n");
@@ -3216,6 +3213,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "[ERROR] Wrong syntax of optional argument: %s\n", optional1);
             exit(-1);
           }
+
           switch (optional1[0]) {
           case 'C': // fall through
           case 'c':
@@ -3433,7 +3431,8 @@ int main(int argc, char *argv[]) {
 #ifdef HAVE_MATH_H
             if (bf_init(bf_options.arg))
               exit(-1); // error description is handled by bf_init
-            pass_ptr = bf_next(hydra_options.rainy);
+
+            pass_ptr = bf_next();
             hydra_brains.countpass += bf_get_pcount();
             hydra_brains.sizepass += BF_BUFLEN;
 #else
